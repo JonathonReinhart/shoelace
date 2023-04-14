@@ -19,7 +19,7 @@ class InitRD:
         if file.mode != MODE:
             raise ValueError(f"File must be open with mode={MODE}")
 
-        self._file = file
+        self._file = self._exit_stack.enter_context(file)
 
         archive = libarchive.custom_writer(
             write_func=lambda data: self._file.write(data),

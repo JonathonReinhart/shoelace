@@ -2,9 +2,18 @@ import argparse
 from pathlib import Path
 import platform
 import tempfile
+from typing import IO
 
 from .initrd import InitRD
 from .qemu import run_qemu
+
+def _build_initrd(
+    args: argparse.Namespace,
+    file: IO[bytes],
+) -> None:
+    with InitRD(file) as initrd:  # flushed and closed on exit
+        initrd.add_file("/init", args.initprog)  # TODO: mode?
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -38,9 +47,7 @@ def main() -> None:
         mode="wb",
     )
     with initrd_tempfile:  # deleted on exit
-        with initrd_tempfile.file as f:  # closed on exit
-            with InitRD(f) as initrd:   # flushed on exit
-                initrd.add_file("/init", args.initprog)  # TODO: mode?
+        _build_initrd(args, initrd_tempfile.file)
 
         #print(f"initrd tempfile: {initrd_tempfile.name}")
         #input("Press ENTER to continue")
