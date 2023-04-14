@@ -2,6 +2,7 @@ from __future__ import annotations
 import contextlib
 from enum import IntEnum
 import logging
+import os
 from pathlib import Path
 import subprocess
 from typing import Any, IO
@@ -13,6 +14,8 @@ import libarchive.entry  # type: ignore[import]
 import libarchive.ffi as _laffi  # type: ignore[import]
 
 _log = logging.getLogger(__name__)
+
+_pkg_dir = Path(__file__).parent.absolute()
 
 
 # TODO:
@@ -204,3 +207,13 @@ def install_busybox(initrd: InitRD, busybox: Path) -> None:
             continue
 
         initrd.add_symlink(path=app_path, target=installed_path)
+
+
+def copy_static_content(initrd: InitRD) -> None:
+    root = _pkg_dir / "static_initrd"
+    for curdir, dirnames, filenames in os.walk(root):
+        dirpath = Path(curdir)
+        for filename in filenames:
+            filepath = dirpath / filename
+            arcpath = Path("/") / filepath.relative_to(root)
+            initrd.add_file(arcpath, filepath)

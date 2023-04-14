@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# Execute all S* scripts in /etc/rcS.d
+for f in /etc/rcS.d/S*; do
+    # Ignore dangling symlinks
+    [ ! -f $f ] && continue
+
+    # Execute the script with a "start" argument
+    $f start
+done

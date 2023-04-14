@@ -1,0 +1,8 @@
+# Busybox inittab
+# See https://github.com/mirror/busybox/blob/master/examples/inittab
+
+# Run /etc/init.d/rcS and wait for it to complete
+::sysinit:/etc/init.d/rcS
+
+# Run a shell on the console
+::respawn:-/bin/sh

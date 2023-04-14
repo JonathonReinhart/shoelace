@@ -7,7 +7,7 @@ import shutil
 import tempfile
 from typing import IO
 
-from .initrd import InitRD, install_busybox
+from .initrd import InitRD, install_busybox, copy_static_content
 from .qemu import run_qemu
 
 def _build_initrd(
@@ -21,6 +21,8 @@ def _build_initrd(
             initrd.add_file("/init", args.init)
         else:
             initrd.add_symlink(path="/init", target="/bin/busybox")
+
+        copy_static_content(initrd)
 
 
 def _readable_file_path(string: str) -> Path:
