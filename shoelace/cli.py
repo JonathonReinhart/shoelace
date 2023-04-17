@@ -174,6 +174,7 @@ def main() -> None:
             kernel=kernel_bzimage,
             initrd=Path(initrd_tempfile.name),
             kernel_args=kernel_args,
+            memory=qemu_config.get("memory"),
             qemu_opts=qemu_opts,
             debug_launch=args.debug,
         )

@@ -18,11 +18,14 @@ from pathlib import Path
 import subprocess
 from typing import Iterable
 
+DEFAULT_MEMORY = "1G"
+
 def run_qemu(
     kernel: Path,
     initrd: Path,
     kernel_args: Iterable[str],
-    qemu_opts: Iterable[str],
+    memory: str | None = None,
+    qemu_opts: Iterable[str] | None = None,
     debug_launch: bool = False,
 ) -> subprocess.Popen:
     """Run QEMU KVM
@@ -36,12 +39,14 @@ def run_qemu(
     qemu_args: list[str | Path] = [
         'qemu-system-x86_64',
         '-machine', 'accel=kvm',
+        '-m', memory or DEFAULT_MEMORY,
         '-nographic',
         '-kernel', kernel,
         '-initrd', initrd,
         '-append', kernel_cmdline,
     ]
-    qemu_args.extend(qemu_opts)
+    if qemu_opts:
+        qemu_args.extend(qemu_opts)
 
     if debug_launch:
         print("About to run:")
