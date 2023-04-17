@@ -147,10 +147,11 @@ def main() -> None:
         kernel_args.append("quiet")
     kernel_args += kernel_config.get("args", [])
 
-    VM_CID = 7
-    qemu_opts = [
-        '-device', f'vhost-vsock-pci,id=vhost-vsock-pci0,guest-cid={VM_CID}',
-    ]
+    # QEMU
+    qemu_config = config.get("qemu", {})
+    qemu_opts = qemu_config.get("options", [])
+    for dev in qemu_config.get("devices", []):
+        qemu_opts += ["-device", dev]
 
     # Build the initrd
     initrd_tempfile = tempfile.NamedTemporaryFile(
