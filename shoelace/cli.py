@@ -175,6 +175,7 @@ def main() -> None:
             initrd=Path(initrd_tempfile.name),
             kernel_args=kernel_args,
             memory=qemu_config.get("memory"),
+            cpus=qemu_config.get("cpus"),
             qemu_opts=qemu_opts,
             debug_launch=args.debug,
         )

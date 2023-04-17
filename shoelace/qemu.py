@@ -25,6 +25,7 @@ def run_qemu(
     initrd: Path,
     kernel_args: Iterable[str],
     memory: str | None = None,
+    cpus: int | None = None,
     qemu_opts: Iterable[str] | None = None,
     debug_launch: bool = False,
 ) -> subprocess.Popen:
@@ -45,6 +46,8 @@ def run_qemu(
         '-initrd', initrd,
         '-append', kernel_cmdline,
     ]
+    if cpus:
+        qemu_args += ['-smp', f'cores={cpus}']
     if qemu_opts:
         qemu_args.extend(qemu_opts)
 
