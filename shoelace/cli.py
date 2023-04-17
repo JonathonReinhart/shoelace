@@ -1,4 +1,5 @@
 import argparse
+from collections.abc import Sequence
 import logging
 import os
 from pathlib import Path
@@ -7,12 +8,14 @@ import shutil
 import tempfile
 from typing import IO
 
-from .initrd import InitRD, install_busybox, copy_static_content
+from .initrd import InitRD, install_busybox, copy_static_content, copy_modules
 from .qemu import run_qemu
 
 def _build_initrd(
     args: argparse.Namespace,
     file: IO[bytes],
+    modules_dir: Path,
+    module_names: Sequence[str],
 ) -> None:
     with InitRD(file) as initrd:  # flushed and closed on exit
         install_busybox(initrd, args.busybox)
@@ -23,6 +26,7 @@ def _build_initrd(
             initrd.add_symlink(path="/init", target="/bin/busybox")
 
         copy_static_content(initrd)
+        copy_modules(initrd, modules_dir, module_names)
 
 
 def _readable_file_path(string: str) -> Path:
@@ -67,6 +71,13 @@ def main() -> None:
 
     # Boot the host kernel
     kernel_bzimage = Path("/boot/vmlinuz-" + platform.release())
+    modules_dir = Path("/lib/modules/") / platform.release()
+
+    module_names = [
+        "vsock",
+        "vmw_vsock_virtio_transport",
+        "virtio_pci",
+    ]
 
     kernel_args = [
         'quiet',
@@ -86,7 +97,7 @@ def main() -> None:
         mode="wb",
     )
     with initrd_tempfile:  # deleted on exit
-        _build_initrd(args, initrd_tempfile.file)
+        _build_initrd(args, initrd_tempfile.file, modules_dir, module_names)
 
         #print(f"initrd tempfile: {initrd_tempfile.name}")
         #input("Press ENTER to continue")

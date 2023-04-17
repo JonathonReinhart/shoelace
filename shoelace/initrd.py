@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import Sequence
 import contextlib
 from enum import IntEnum
 import logging
@@ -217,3 +218,62 @@ def copy_static_content(initrd: InitRD) -> None:
             filepath = dirpath / filename
             arcpath = Path("/") / filepath.relative_to(root)
             initrd.add_file(arcpath, filepath)
+
+
+def copy_modules(initrd: InitRD, modules_dir: Path, module_names: Sequence[str]) -> None:
+    # Copy this metadata in its entirety
+    filenames = (
+        "modules.alias",
+        "modules.builtin",
+        "modules.dep",
+        "modules.devname",
+        "modules.order",
+        "modules.softdep",
+        "modules.symbols",
+    )
+    for filename in filenames:
+        path = modules_dir / filename
+        initrd.add_file(path, path)
+
+    # Build a mapping of {module_name: module_relpath}
+    name_map: dict[str, Path] = {}
+    for path in (modules_dir / "kernel").glob("**/*.ko"):
+        if path.stem in name_map:
+            raise KeyError(f"Module named {path.stem} already identified")
+        name_map[path.stem] = path.relative_to(modules_dir)
+
+    # Load the module dependency graph {module_relpath => module_relpath}
+    module_deps: dict[Path, list[Path]] = {}
+    with (modules_dir / "modules.dep").open() as f:
+        for line in f:
+            line = line.strip()
+            parts = line.split()
+            assert len(parts) >= 1
+            assert parts[0].endswith(":")
+            modpath = Path(parts[0][:-1])
+            deps = [Path(p) for p in parts[1:]]
+            module_deps[modpath] = deps
+
+    # Add modules to initrd
+    added_modules: set[Path] = set()  # TODO: track in InitRD
+    for name in module_names:
+        module_relpath = name_map[name]
+        module_abspath = modules_dir / module_relpath
+        if module_abspath in added_modules:
+            continue
+
+        # Add the module
+        initrd.add_file(module_abspath, module_abspath)
+        added_modules.add(module_abspath)
+
+        # Add its dependencies
+        for dep_relpath in module_deps[module_relpath]:
+            dep_abspath = modules_dir / dep_relpath
+            if dep_abspath in added_modules:
+                continue
+            initrd.add_file(dep_abspath, dep_abspath)
+            added_modules.add(dep_abspath)
+
+    # Load modules at init time
+    etc_modules_content = "".join(f"{name}\n" for name in module_names)
+    initrd.add_file("/etc/modules", etc_modules_content.encode("ascii"))

@@ -1,0 +1,32 @@
+#!/bin/sh
+# Load kernel modules
+
+case "${1}" in
+start)
+    [ ! -e /etc/modules ] && exit 0
+    while read module args; do
+        # Ignore comments and blank lines
+        case "$module" in
+        ""|"#"*) continue;;
+        esac
+
+        # Load module w/ args
+        modprobe $module $args
+        if [ $? -ne 0 ]; then
+            failed_modules="$failed_modules $module"
+        fi
+    done < /etc/modules
+
+    if [ -n "$failed_modules" ]; then
+        echo "Failed to load modules: $failed_modules" >&2
+        exit 1
+    fi
+    ;;
+
+*)
+    echo "Usage: ${0} start"
+    exit 1
+    ;;
+esac
+
+exit 0
