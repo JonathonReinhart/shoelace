@@ -145,6 +145,7 @@ def main() -> None:
     ]
     if not args.debug:
         kernel_args.append("quiet")
+    kernel_args += kernel_config.get("args", [])
 
     VM_CID = 7
     qemu_opts = [
