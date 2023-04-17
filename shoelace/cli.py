@@ -134,12 +134,9 @@ def main() -> None:
     kernel_version = kernel_ver_str.split()[0]
     _log.info(f"Detected kernel version: %s", kernel_version)
 
-
-    module_names = [
-        "vsock",
-        "vmw_vsock_virtio_transport",
-        "virtio_pci",
-    ]
+    # Initrd
+    initrd_config = config.get("initrd", {})
+    module_names = initrd_config.get("modules", [])
 
     # Kernel args
     kernel_args = [
