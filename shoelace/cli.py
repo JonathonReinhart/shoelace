@@ -41,7 +41,7 @@ def _build_initrd(
     kernel_version: str,
     modules_basedir: Path | None,
     module_names: Sequence[str],
-    extra_files: Mapping[Path | str, Path | str] | None = None,
+    extra_files: Mapping[Path, Path] | None = None,
 ) -> None:
     if extra_files is None:
         extra_files = {}
@@ -61,8 +61,6 @@ def _build_initrd(
             copy_modules(initrd, kernel_version, modules_basedir, module_names)
 
         for vm_path, host_path in extra_files.items():
-            vm_path = Path(vm_path)
-            host_path = Path(host_path).expanduser()
             initrd.add_file(vm_path, host_path)
 
 
@@ -122,36 +120,15 @@ def main() -> None:
     except ConfigError as err:
         raise SystemExit(f"Config error: {err}")
 
-    kernel_config = config.get("kernel", {})
-
-    # Kernel image
-    kernel_bzimage = kernel_config.get("image")
-    if kernel_bzimage:
-        use_host_kernel = False
-        kernel_bzimage = Path(kernel_bzimage).expanduser()
-    else:
-        use_host_kernel = True
-        kernel_bzimage = Path("/boot/vmlinuz-" + platform.release())
-
-    # Kernel modules
-    modules_dir = kernel_config.get("modules_dir")
-    if modules_dir:
-        modules_basedir = Path(modules_dir).expanduser()
-    else:
-        if use_host_kernel:
-            modules_basedir = Path("/lib/modules")
-        else:
-            modules_basedir = None
+    #print("Config:")
+    #print(config)
+    #raise SystemExit()
 
     # Get kernel version
-    with kernel_bzimage.open("rb") as f:
+    with config.kernel.image.open("rb") as f:
         kernel_ver_str = get_kernel_version(f)
     kernel_version = kernel_ver_str.split()[0]
     _log.info(f"Detected kernel version: %s", kernel_version)
-
-    # Initrd
-    initrd_config = config.get("initrd", {})
-    module_names = initrd_config.get("modules", [])
 
     # Kernel args
     kernel_args = [
@@ -160,12 +137,11 @@ def main() -> None:
     ]
     if not args.debug:
         kernel_args.append("quiet")
-    kernel_args += kernel_config.get("args", [])
+    kernel_args += config.kernel.args
 
     # QEMU
-    qemu_config = config.get("qemu", {})
-    qemu_opts = qemu_config.get("options", [])
-    for dev in qemu_config.get("devices", []):
+    qemu_opts = list(config.qemu.options)
+    for dev in config.qemu.devices:
         qemu_opts += ["-device", dev]
 
     # Build the initrd
@@ -180,18 +156,18 @@ def main() -> None:
             args=args,
             file=initrd_tempfile.file,
             kernel_version=kernel_version,
-            modules_basedir=modules_basedir,
-            module_names=module_names,
-            extra_files=initrd_config.get("files", {}),
+            modules_basedir=config.kernel.modules_dir,
+            module_names=config.initrd.modules,
+            extra_files=config.initrd.files,
         )
 
         # Run QEMU!
         qemu_proc = run_qemu(
-            kernel=kernel_bzimage,
+            kernel=config.kernel.image,
             initrd=Path(initrd_tempfile.name),
             kernel_args=kernel_args,
-            memory=qemu_config.get("memory"),
-            cpus=qemu_config.get("cpus"),
+            memory=config.qemu.memory,
+            cpus=config.qemu.cpus,
             qemu_opts=qemu_opts,
             debug_launch=args.debug,
         )
