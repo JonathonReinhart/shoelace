@@ -190,12 +190,16 @@ class KernelConfig(ConfigBase):
 @dataclasses.dataclass(frozen=True)
 class InitrdConfig(ConfigBase):
     modules: Sequence[str]
+    ext_modules: Sequence[Path]
     files: Mapping[Path, Path]  # guestpath: hostpath
 
     @classmethod
     def from_cfgdict(cls, data: ConfigDict) -> InitrdConfig:
         return cls(
             modules=data.get_list("modules", str),
+            ext_modules=[
+                data.convert_path(p) for p in data.get_list("ext_modules", str)
+            ],
             files={
                 Path(gpath): data.convert_path(hpath)
                 for gpath, hpath in data.get("files", dict, {}).items()

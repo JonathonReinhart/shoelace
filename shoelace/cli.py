@@ -41,6 +41,7 @@ def _build_initrd(
     kernel_version: str,
     modules_basedir: Path | None,
     module_names: Sequence[str],
+    ext_modules: Sequence[Path],
     extra_files: Mapping[Path, Path] | None = None,
 ) -> None:
     if extra_files is None:
@@ -55,10 +56,11 @@ def _build_initrd(
             initrd.add_symlink(path=_KERNEL_INIT, target="/bin/busybox")
 
         copy_static_content(initrd)
-        if module_names:
+
+        if module_names or ext_modules:
             if not modules_basedir:
                 raise Exception("modules basedir not set")
-            copy_modules(initrd, kernel_version, modules_basedir, module_names)
+            copy_modules(initrd, kernel_version, modules_basedir, module_names, ext_modules)
 
         for vm_path, host_path in extra_files.items():
             initrd.add_file(vm_path, host_path)
@@ -158,6 +160,7 @@ def main() -> None:
             kernel_version=kernel_version,
             modules_basedir=config.kernel.modules_dir,
             module_names=config.initrd.modules,
+            ext_modules=config.initrd.ext_modules,
             extra_files=config.initrd.files,
         )
 

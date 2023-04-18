@@ -236,7 +236,13 @@ def copy_static_content(initrd: InitRD) -> None:
             initrd.add_file(arcpath, filepath)
 
 
-def copy_modules(initrd: InitRD, kernel_version: str, modules_basedir: Path, module_names: Sequence[str]) -> None:
+def copy_modules(
+    initrd: InitRD,
+    kernel_version: str,
+    modules_basedir: Path,
+    module_names: Sequence[str],
+    ext_modules: Sequence[Path],
+) -> None:
     modules_dir = modules_basedir / kernel_version
     target_modules_dir = Path("/lib/modules") / kernel_version
 
@@ -282,16 +288,29 @@ def copy_modules(initrd: InitRD, kernel_version: str, modules_basedir: Path, mod
             module_deps[modpath] = deps
 
     # Add modules to initrd
-    for name in module_names:
-        module_relpath = name_map[name]
+    if module_names:
+        for name in module_names:
+            module_relpath = name_map[name]
 
-        # Add the module
-        copy_modules_file(module_relpath)
+            # Add the module
+            copy_modules_file(module_relpath)
 
-        # Add its dependencies
-        for dep_relpath in module_deps[module_relpath]:
-            copy_modules_file(dep_relpath)
+            # Add its dependencies
+            for dep_relpath in module_deps[module_relpath]:
+                copy_modules_file(dep_relpath)
 
-    # Load modules at init time
-    etc_modules_content = "".join(f"{name}\n" for name in module_names)
-    initrd.add_file("/etc/modules", etc_modules_content.encode("ascii"))
+        # Load modules at init time
+        initrd.add_file("/etc/modules",
+            "".join(f"{name}\n" for name in module_names).encode("ascii"))
+
+    # Add external modules
+    if ext_modules:
+        ext_mod_target_paths = []
+        for mod_path in ext_modules:
+            target_path = target_modules_dir / "external" / mod_path.name
+            initrd.add_file(target_path, mod_path)
+            ext_mod_target_paths.append(target_path)
+
+        # TODO(jrreinhart): See TODO in static_initrd/etc/rcS.d/S02-modules
+        initrd.add_file("/etc/modules-ext",
+            "".join(f"{path}\n" for path in ext_mod_target_paths).encode("ascii"))

@@ -3,19 +3,43 @@
 
 case "${1}" in
 start)
-    [ ! -e /etc/modules ] && exit 0
-    while read module args; do
-        # Ignore comments and blank lines
-        case "$module" in
-        ""|"#"*) continue;;
-        esac
+    if [ -e /etc/modules ]; then
+        while read module args; do
+            # Ignore comments and blank lines
+            case "$module" in
+            ""|"#"*) continue;;
+            esac
 
-        # Load module w/ args
-        modprobe $module $args
-        if [ $? -ne 0 ]; then
-            failed_modules="$failed_modules $module"
-        fi
-    done < /etc/modules
+            # Load module w/ args
+            modprobe $module $args
+            if [ $? -ne 0 ]; then
+                failed_modules="$failed_modules $module"
+            fi
+        done < /etc/modules
+    fi
+
+    # "External" modules
+    # TODO(jrreinhart): Handle these the same as normal modules, via modprobe,
+    # for consistency and depenency handling.
+    #
+    # This (https://stackoverflow.com/a/35968849) suggests we should:
+    # - Copy external module foo.ko to /lib/modules/$(uname -r)/external/foo.ko
+    # - Add external/foo.ko to /lib/modules/$(uname -r)/modules.dep
+    # - Run depmod
+    if [ -e /etc/modules-ext ]; then
+        while read modulepath args; do
+            # Ignore comments and blank lines
+            case "$modulepath" in
+            ""|"#"*) continue;;
+            esac
+
+            # Load module w/ args
+            insmod $modulepath $args
+            if [ $? -ne 0 ]; then
+                failed_modules="$failed_modules $modulepath"
+            fi
+        done < /etc/modules-ext
+    fi
 
     if [ -n "$failed_modules" ]; then
         echo "Failed to load modules: $failed_modules" >&2
