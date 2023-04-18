@@ -15,7 +15,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import argparse
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 import logging
 import os
 from pathlib import Path
@@ -41,7 +41,11 @@ def _build_initrd(
     kernel_version: str,
     modules_basedir: Path | None,
     module_names: Sequence[str],
+    extra_files: Mapping[Path | str, Path | str] | None = None,
 ) -> None:
+    if extra_files is None:
+        extra_files = {}
+
     with InitRD(file) as initrd:  # flushed and closed on exit
         install_busybox(initrd, args.busybox)
 
@@ -55,6 +59,11 @@ def _build_initrd(
             if not modules_basedir:
                 raise Exception("modules basedir not set")
             copy_modules(initrd, kernel_version, modules_basedir, module_names)
+
+        for vm_path, host_path in extra_files.items():
+            vm_path = Path(vm_path)
+            host_path = Path(host_path).expanduser()
+            initrd.add_file(vm_path, host_path)
 
 
 def _readable_file_path(string: str) -> Path:
@@ -167,6 +176,7 @@ def main() -> None:
             kernel_version=kernel_version,
             modules_basedir=modules_basedir,
             module_names=module_names,
+            extra_files=initrd_config.get("files", {}),
         )
 
         # Run QEMU!
