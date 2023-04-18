@@ -24,6 +24,7 @@ import shutil
 import tempfile
 from typing import IO
 
+from .config import load_config, ConfigError
 from .initrd import InitRD, install_busybox, copy_static_content, copy_modules
 from .qemu import run_qemu
 
@@ -70,6 +71,8 @@ def setup_logging(args: argparse.Namespace) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("-c", "--config", type=_readable_file_path,
+                        help="Path to a shoelace.toml config file")
     parser.add_argument("-i", "--init", type=_readable_file_path,
                         help="Program to run as init; if not given, busybox is used")
     parser.add_argument("--busybox", type=_readable_file_path,
@@ -91,6 +94,13 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     setup_logging(args)
+
+    ################
+    # Process config
+    try:
+        config = load_config(args.config)
+    except ConfigError as err:
+        raise SystemExit(f"Config error: {err}")
 
     # Boot the host kernel
     kernel_bzimage = Path("/boot/vmlinuz-" + platform.release())
