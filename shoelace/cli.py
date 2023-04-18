@@ -95,6 +95,12 @@ def parse_args() -> argparse.Namespace:
 
     args = parser.parse_args()
 
+    # Config defaults to shoelace.toml in current dir, if present
+    if args.config is None:
+        path = Path("shoelace.toml")
+        if path.exists():
+            args.config = path
+
     if args.busybox is None:
         busybox = shutil.which("busybox")
         if busybox:
