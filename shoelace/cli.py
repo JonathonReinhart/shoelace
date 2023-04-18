@@ -26,6 +26,7 @@ from typing import IO
 
 from .config import load_config, ConfigError
 from .initrd import InitRD, install_busybox, copy_static_content, copy_modules
+from .kernel import get_kernel_version
 from .qemu import run_qemu
 
 
@@ -111,6 +112,12 @@ def main() -> None:
         "vmw_vsock_virtio_transport",
         "virtio_pci",
     ]
+
+    # Get kernel version
+    with kernel_bzimage.open("rb") as f:
+        kernel_ver_str = get_kernel_version(f)
+    kernel_version = kernel_ver_str.split()[0]
+    _log.info(f"Detected kernel version: %s", kernel_version)
 
     # Kernel args
     kernel_args = [
