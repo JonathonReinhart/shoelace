@@ -107,21 +107,39 @@ def main() -> None:
     except ConfigError as err:
         raise SystemExit(f"Config error: {err}")
 
-    # Boot the host kernel
-    kernel_bzimage = Path("/boot/vmlinuz-" + platform.release())
-    modules_basedir = Path("/lib/modules/")
+    kernel_config = config.get("kernel", {})
 
-    module_names = [
-        "vsock",
-        "vmw_vsock_virtio_transport",
-        "virtio_pci",
-    ]
+    # Kernel image
+    kernel_bzimage = kernel_config.get("image")
+    if kernel_bzimage:
+        use_host_kernel = False
+        kernel_bzimage = Path(kernel_bzimage).expanduser()
+    else:
+        use_host_kernel = True
+        kernel_bzimage = Path("/boot/vmlinuz-" + platform.release())
+
+    # Kernel modules
+    modules_dir = kernel_config.get("modules_dir")
+    if modules_dir:
+        modules_basedir = Path(modules_dir).expanduser()
+    else:
+        if use_host_kernel:
+            modules_basedir = Path("/lib/modules")
+        else:
+            modules_basedir = None
 
     # Get kernel version
     with kernel_bzimage.open("rb") as f:
         kernel_ver_str = get_kernel_version(f)
     kernel_version = kernel_ver_str.split()[0]
     _log.info(f"Detected kernel version: %s", kernel_version)
+
+
+    module_names = [
+        "vsock",
+        "vmw_vsock_virtio_transport",
+        "virtio_pci",
+    ]
 
     # Kernel args
     kernel_args = [
