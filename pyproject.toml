@@ -1,0 +1,41 @@
+[project]
+name = "shoelace-vm"
+version = "0.0.1"
+authors = [
+    {name = "Jonathon Reinhart", email = "jrreinhart@google.com"}
+]
+description = "Run tiny VMs"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: System :: Operating System",
+]
+dependencies = [
+    # TODO(jrreinhart): Use stdlib tomllib for Python 3.11+
+    # https://github.com/hukkin/tomli#building-a-tomlitomllib-compatibility-layer
+    #"tomli >= 1.1.0 ; python_version < 3.11",
+    "tomli >= 1.1.0",
+    "libarchive-c ~= 2.9",
+]
+
+[project.scripts]
+shoelace = "shoelace.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+#[tool.hatch.build.targets.wheel]
+[tool.hatch.build]
+packages = ["shoelace"]
