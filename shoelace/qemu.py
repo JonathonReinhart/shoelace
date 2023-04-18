@@ -23,6 +23,7 @@ def run_qemu(
     initrd: Path,
     kernel_args: Iterable[str],
     qemu_opts: Iterable[str],
+    debug_launch: bool = False,
 ) -> subprocess.Popen:
     """Run QEMU KVM
 
@@ -42,9 +43,10 @@ def run_qemu(
     ]
     qemu_args.extend(qemu_opts)
 
-    #print("About to run:")
-    #from pprint import pprint
-    #pprint(qemu_args)
-    #input("Press ENTER to continue")
+    if debug_launch:
+        print("About to run:")
+        from pprint import pprint
+        pprint(qemu_args)
+        input("Press ENTER to continue")
 
     return subprocess.Popen(qemu_args)

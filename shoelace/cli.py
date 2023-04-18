@@ -30,6 +30,8 @@ from .qemu import run_qemu
 
 _KERNEL_INIT = "/init"
 
+_log = logging.getLogger(__name__)
+
 
 def _build_initrd(
     args: argparse.Namespace,
@@ -61,8 +63,8 @@ def _readable_file_path(string: str) -> Path:
 
 
 def setup_logging(args: argparse.Namespace) -> None:
-    # TODO
-    logging.basicConfig(level=logging.INFO)
+    level = logging.DEBUG if args.debug else logging.INFO
+    logging.basicConfig(level=level)
 
 
 def parse_args() -> argparse.Namespace:
@@ -72,6 +74,7 @@ def parse_args() -> argparse.Namespace:
                         help="Program to run as init; if not given, busybox is used")
     parser.add_argument("--busybox", type=_readable_file_path,
                         help="Path to statically-linked busybox binary")
+    parser.add_argument("--debug", action="store_true")
 
     args = parser.parse_args()
 
@@ -101,10 +104,11 @@ def main() -> None:
 
     # Kernel args
     kernel_args = [
-        "quiet",
         "console=ttyS0",
         f"rdinit={_KERNEL_INIT}",
     ]
+    if not args.debug:
+        kernel_args.append("quiet")
 
     VM_CID = 7
     qemu_opts = [
@@ -118,10 +122,13 @@ def main() -> None:
         mode="wb",
     )
     with initrd_tempfile:  # deleted on exit
-        _build_initrd(args, initrd_tempfile.file, modules_dir, module_names)
-
-        #print(f"initrd tempfile: {initrd_tempfile.name}")
-        #input("Press ENTER to continue")
+        _log.info(f"Building initrd tempfile: %s", initrd_tempfile.name)
+        _build_initrd(
+            args=args,
+            file=initrd_tempfile.file,
+            modules_dir=modules_dir,
+            module_names=module_names,
+        )
 
         # Run QEMU!
         qemu_proc = run_qemu(
@@ -129,6 +136,7 @@ def main() -> None:
             initrd=Path(initrd_tempfile.name),
             kernel_args=kernel_args,
             qemu_opts=qemu_opts,
+            debug_launch=args.debug,
         )
         with qemu_proc:
             qemu_proc.wait()
