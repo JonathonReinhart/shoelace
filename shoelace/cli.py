@@ -38,7 +38,8 @@ _log = logging.getLogger(__name__)
 def _build_initrd(
     args: argparse.Namespace,
     file: IO[bytes],
-    modules_dir: Path,
+    kernel_version: str,
+    modules_basedir: Path | None,
     module_names: Sequence[str],
 ) -> None:
     with InitRD(file) as initrd:  # flushed and closed on exit
@@ -50,7 +51,10 @@ def _build_initrd(
             initrd.add_symlink(path=_KERNEL_INIT, target="/bin/busybox")
 
         copy_static_content(initrd)
-        copy_modules(initrd, modules_dir, module_names)
+        if module_names:
+            if not modules_basedir:
+                raise Exception("modules basedir not set")
+            copy_modules(initrd, kernel_version, modules_basedir, module_names)
 
 
 def _readable_file_path(string: str) -> Path:
@@ -105,7 +109,7 @@ def main() -> None:
 
     # Boot the host kernel
     kernel_bzimage = Path("/boot/vmlinuz-" + platform.release())
-    modules_dir = Path("/lib/modules/") / platform.release()
+    modules_basedir = Path("/lib/modules/")
 
     module_names = [
         "vsock",
@@ -143,7 +147,8 @@ def main() -> None:
         _build_initrd(
             args=args,
             file=initrd_tempfile.file,
-            modules_dir=modules_dir,
+            kernel_version=kernel_version,
+            modules_basedir=modules_basedir,
             module_names=module_names,
         )
 

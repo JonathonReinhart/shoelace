@@ -236,7 +236,19 @@ def copy_static_content(initrd: InitRD) -> None:
             initrd.add_file(arcpath, filepath)
 
 
-def copy_modules(initrd: InitRD, modules_dir: Path, module_names: Sequence[str]) -> None:
+def copy_modules(initrd: InitRD, kernel_version: str, modules_basedir: Path, module_names: Sequence[str]) -> None:
+    modules_dir = modules_basedir / kernel_version
+    target_modules_dir = Path("/lib/modules") / kernel_version
+
+    copied_files: set[Path] = set()  # TODO: track in InitRD
+    def copy_modules_file(relpath: Path|str):
+        """Copy a file from modules_dir to initrd /lib/modules/."""
+        relpath = Path(relpath)
+        if relpath in copied_files:
+            return
+        initrd.add_file(target_modules_dir / relpath, modules_dir / relpath)
+        copied_files.add(relpath)
+
     # Copy this metadata in its entirety
     filenames = (
         "modules.alias",
@@ -248,8 +260,7 @@ def copy_modules(initrd: InitRD, modules_dir: Path, module_names: Sequence[str])
         "modules.symbols",
     )
     for filename in filenames:
-        path = modules_dir / filename
-        initrd.add_file(path, path)
+        copy_modules_file(filename)
 
     # Build a mapping of {module_name: module_relpath}
     name_map: dict[str, Path] = {}
@@ -271,24 +282,15 @@ def copy_modules(initrd: InitRD, modules_dir: Path, module_names: Sequence[str])
             module_deps[modpath] = deps
 
     # Add modules to initrd
-    added_modules: set[Path] = set()  # TODO: track in InitRD
     for name in module_names:
         module_relpath = name_map[name]
-        module_abspath = modules_dir / module_relpath
-        if module_abspath in added_modules:
-            continue
 
         # Add the module
-        initrd.add_file(module_abspath, module_abspath)
-        added_modules.add(module_abspath)
+        copy_modules_file(module_relpath)
 
         # Add its dependencies
         for dep_relpath in module_deps[module_relpath]:
-            dep_abspath = modules_dir / dep_relpath
-            if dep_abspath in added_modules:
-                continue
-            initrd.add_file(dep_abspath, dep_abspath)
-            added_modules.add(dep_abspath)
+            copy_modules_file(dep_relpath)
 
     # Load modules at init time
     etc_modules_content = "".join(f"{name}\n" for name in module_names)
