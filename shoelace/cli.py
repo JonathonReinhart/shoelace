@@ -27,6 +27,10 @@ from typing import IO
 from .initrd import InitRD, install_busybox, copy_static_content, copy_modules
 from .qemu import run_qemu
 
+
+_KERNEL_INIT = "/init"
+
+
 def _build_initrd(
     args: argparse.Namespace,
     file: IO[bytes],
@@ -37,9 +41,9 @@ def _build_initrd(
         install_busybox(initrd, args.busybox)
 
         if args.init:
-            initrd.add_file("/init", args.init)
+            initrd.add_file(_KERNEL_INIT, args.init)
         else:
-            initrd.add_symlink(path="/init", target="/bin/busybox")
+            initrd.add_symlink(path=_KERNEL_INIT, target="/bin/busybox")
 
         copy_static_content(initrd)
         copy_modules(initrd, modules_dir, module_names)
@@ -95,10 +99,11 @@ def main() -> None:
         "virtio_pci",
     ]
 
+    # Kernel args
     kernel_args = [
-        'quiet',
-        'console=ttyS0',
-		'rdinit=/init',
+        "quiet",
+        "console=ttyS0",
+        f"rdinit={_KERNEL_INIT}",
     ]
 
     VM_CID = 7
