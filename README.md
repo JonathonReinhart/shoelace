@@ -16,7 +16,7 @@ $ sudo apt install python3-libarchive-c busybox-static
 
 Then install (as a user) with pip:
 ```
-$ git clone sso://user/jrreinhart/shoelace
+$ git clone https://github.com/jonathonReinhart/shoelace
 $ cd shoelace
 $ pip install .
 ```
