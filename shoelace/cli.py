@@ -134,7 +134,7 @@ def main() -> None:
 
     # Kernel args
     kernel_args = [
-        "console=ttyS0",
+        "console=hvc0",
         f"rdinit={_KERNEL_INIT}",
     ]
     if not args.debug:

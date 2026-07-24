@@ -41,7 +41,12 @@ def run_qemu(
         'qemu-system-x86_64',
         '-machine', 'accel=kvm',
         '-m', memory or DEFAULT_MEMORY,
-        '-nographic',
+
+        '-display', 'none',
+        '-device', 'virtio-serial-pci',
+        '-chardev', 'stdio,id=char0,signal=off',
+        '-device', 'virtconsole,chardev=char0',
+
         '-kernel', kernel,
         '-initrd', initrd,
         '-append', kernel_cmdline,
@@ -57,4 +62,6 @@ def run_qemu(
         pprint(qemu_args)
         input("Press ENTER to continue")
 
-    return subprocess.Popen(qemu_args)
+    errf = open("qemu.stderr", "wb", buffering=0)
+
+    return subprocess.Popen(qemu_args, stderr=errf)
